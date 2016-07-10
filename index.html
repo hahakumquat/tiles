@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Tiles</title>
+    </head>
+    <body>
+        <script type="x-shader/x-vertex" id="vertexshader">
+         
+         varying vec2 vUv;
+         
+         void main() {
+             gl_Position = projectionMatrix *
+             modelViewMatrix *
+             vec4(position, 1.0);
+         }
+         
+        </script>
+        <script type="x-shader/x-fragment" id="fragmentshader">
+         uniform float rotation;
+         uniform sampler2D texture;
+         uniform float personalHeat;
+         
+         void main() {
+             
+             vec2 tPos = vec2(0., rotation / 3.1416);
+             vec4 color = texture2D(texture, tPos);
+             gl_FragColor = vec4(vec3(color.r + personalHeat,
+                                 color.g + personalHeat / 2.,
+                                 color.b + personalHeat / 10.) + 0.03,
+                                 1.0);
+         }
+         
+        </script>
+        <script src="three.min.js"></script>
+        <script src="tiles.js"></script>
+    </body>
+</html>
