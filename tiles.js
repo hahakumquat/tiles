@@ -1,8 +1,15 @@
+window.setTimeout(function() {
+    fade(document.getElementById("title"));
+    fade(document.getElementById("info"));
+}, 5000);
+
 var scene, camera, renderer, light;
 
 // tile location information
-var WIDTH = window.innerWidth * .9;
-var HEIGHT = WIDTH / 2;
+document.getElementById("container").setAttribute("style","width:90%");
+document.getElementById("container").setAttribute("style","height:90%");
+var WIDTH = document.getElementById("container").offsetWidth;
+var HEIGHT = window.innerHeight;
 var tileArray = [];
 var NUMSQUARES = 30;
 var DIMENSION = WIDTH / NUMSQUARES;
@@ -47,12 +54,12 @@ function init() {
 
     renderer = new THREE.WebGLRenderer();
     renderer.setSize(WIDTH, HEIGHT);
-    document.body.appendChild(renderer.domElement);
+    document.getElementById("container").appendChild(renderer.domElement);
 
     document.addEventListener("mousemove", disturb, false);
 
     document.body.onkeyup = function(e) {
-        if (e.keyCode = 32) {
+        if (e.keyCode == 32) {
             var geom;
             if (shape)
                 geom = new THREE.SphereGeometry(DIMENSION/1.5, 15);
@@ -68,6 +75,7 @@ function init() {
         tex.needsUpdate = true;
         disturb(e, true);
     }, false);
+    
     animate();
 }
 
@@ -92,8 +100,8 @@ function genMeshes(geom) {
             });
 
             var square = new THREE.Mesh(geom, mat);
-            square.position.setX((j - cols / 2) * DIMENSION);
-            square.position.setY((rows / 2 - k) * DIMENSION);
+            square.position.setX((j - (cols - 1)/ 2) * DIMENSION);
+            square.position.setY(Math.floor(rows / 2 - k) * DIMENSION);
             square.row = k;
             square.col = j;
             square.ripple = -1;
@@ -102,6 +110,19 @@ function genMeshes(geom) {
             tileArray.push(square);
         }
     }
+}
+
+function fade(element) {
+    var op = 1;  // initial opacity
+    var timer = setInterval(function () {
+        if (op <= 0.1){
+            clearInterval(timer);
+            element.style.display = 'none';
+        }
+        element.style.opacity = op;
+        element.style.filter = 'alpha(opacity=' + op * 100 + ")";
+        op -= op * 0.1;
+    }, 50);
 }
 
 function genTexture(colors) {
@@ -247,10 +268,10 @@ function animate() {
             t.ripple--;
         
         t.material.uniforms.rotation.value = t.rotation.x;
-        t.position.z = Math.min(WIDTH / 2, t.rotation.x / Math.PI * WIDTH / 4);
+        t.position.z = Math.min(camera.position.z / 3, t.rotation.x / Math.PI * WIDTH / 8);
     });
 
-    if (timer > 200) {
+    if (timer > 300) {
         timer = 0;
         propagate([tileArray[Math.floor(Math.random() * tileArray.length)]], levels);
         propagate([tileArray[Math.floor(Math.random() * tileArray.length)]], levels);
