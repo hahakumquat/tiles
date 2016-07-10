@@ -15,35 +15,72 @@ var mouse = {};
 var raycaster = new THREE.Raycaster();
 
 // gradients
-var red = ["black", "#771122", "red", "white"];
+var red = ["black", "#771122", "red", "#ffeeee", "white", "#ff7777", "white"];
 var orange = ["black", "#250101", "#370000", "#aa4400", "white", "orange", "white", "#eeee33", "white"];
-var yellow = ["black", "#775511", "yellow", "white"];
+var yellow = ["black", "#775511", "#ffff44", "white", "yellow", "white"];
 var green = ["black", "#007733", "white", "#11ff33", "white"];
 var blue = ["black", "#003377", "white", "#00ffff", "white"];
-var pink = ["black", "#662233","magenta", "pink", "white"];
+var pink = ["black", "#662233","magenta", "white", "pink", "pink", "white"];
 var grads = [red, orange, yellow, green, blue, pink];
 
 // animation related things
 var ctr = Math.floor(Math.random() * grads.length);
 var ctx, tex;
-var levels = 25;
+var levels = 30;
 var queue = [];
 var timer = 0;
+var shape = true;
 
 init();
 
 function init() {
     
     scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(30, WIDTH/HEIGHT, 1, 1 + DIMENSION + WIDTH);
+    camera = new THREE.PerspectiveCamera(30, WIDTH/HEIGHT, 1, WIDTH * 2);
     camera.position.z = WIDTH;
     scene.add(camera);
     
     tex = genTexture(grads[ctr]);
+
+    var geom = new THREE.BoxGeometry(DIMENSION - 4, DIMENSION - 4);
+    genMeshes(geom);
+
+    renderer = new THREE.WebGLRenderer();
+    renderer.setSize(WIDTH, HEIGHT);
+    document.body.appendChild(renderer.domElement);
+
+    document.addEventListener("mousemove", disturb, false);
+
+    document.body.onkeyup = function(e) {
+        if (e.keyCode = 32) {
+            var geom;
+            if (shape)
+                geom = new THREE.SphereGeometry(DIMENSION/1.5, 15);
+            else
+                geom = new THREE.BoxGeometry(DIMENSION - 4, DIMENSION - 4);
+            genMeshes(geom);
+            shape = !shape;
+        }
+    }
+    
+    document.addEventListener("click", function(e) {
+        setGradient(ctx, grads[ ++ctr % grads.length]);
+        tex.needsUpdate = true;
+        disturb(e, true);
+    }, false);
+    animate();
+}
+
+function genMeshes(geom) {
+
+    tileArray.forEach(function(t) {
+        scene.remove(t);
+    });
+    tileArray = [];
     
     for (var k = 0; k < rows; k++) {
         for (var j = 0; j < cols; j++) {
-            var geom = new THREE.PlaneGeometry(DIMENSION - 2, DIMENSION - 2);
+            
             mat = new THREE.ShaderMaterial({
                 uniforms: {
                     texture: { type: "t", value: tex },
@@ -53,9 +90,9 @@ function init() {
                 fragmentShader: document.getElementById("fragmentshader").textContent,
                 side: THREE.DoubleSide
             });
-            
+
             var square = new THREE.Mesh(geom, mat);
-            square.position.setX((-cols / 2 + j) * DIMENSION);
+            square.position.setX((j - cols / 2) * DIMENSION);
             square.position.setY((rows / 2 - k) * DIMENSION);
             square.row = k;
             square.col = j;
@@ -65,18 +102,6 @@ function init() {
             tileArray.push(square);
         }
     }
-
-    renderer = new THREE.WebGLRenderer();
-    renderer.setSize(WIDTH, HEIGHT);
-    document.body.appendChild(renderer.domElement);
-
-    document.addEventListener("mousemove", disturb, false);
-    document.addEventListener("click", function(e) {
-        setGradient(ctx, grads[ ++ctr % grads.length]);
-        tex.needsUpdate = true;
-        disturb(e, true);
-    }, false);
-    animate();
 }
 
 function genTexture(colors) {
@@ -150,9 +175,8 @@ function flare(mesh) {
 }
 
 function propagate(queue, dist) {
-    console.log(queue);
-    // var flag = Math.floor(Math.random() * 3);
-    var flag = 2;
+
+    var flag = Math.floor(Math.random() * 3);
     
     while (dist > 0) {
         for (var k = 0, c = queue.length; k < c; k++) {
@@ -209,6 +233,9 @@ function animate() {
     
     requestAnimationFrame(animate);
     tileArray.forEach(function(t) {
+        if (t.scale.z > 1)
+            t.scale.z /= 1.1;
+        else t.position.z = 0;
         if (t.rotation.x > 0.05) 
             t.rotation.x /= 1.1;
         else
@@ -220,6 +247,7 @@ function animate() {
             t.ripple--;
         
         t.material.uniforms.rotation.value = t.rotation.x;
+        t.position.z = Math.min(WIDTH / 2, t.rotation.x / Math.PI * WIDTH / 4);
     });
 
     if (timer > 200) {

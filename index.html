@@ -21,7 +21,7 @@
          
          void main() {
              // leaving rotation unscaled raises brightness
-             vec2 tPos = vec2(0., rotation);
+             vec2 tPos = vec2(0., rotation / 3.15);
              vec4 color = texture2D(texture, tPos);
              gl_FragColor = vec4(vec3(color.r,
                                  color.g,
