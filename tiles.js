@@ -15,17 +15,20 @@ var mouse = {};
 var raycaster = new THREE.Raycaster();
 
 // gradients
-var fire = ["black", "#250101", "#370000", "#aa4400", "white", "orange", "white", "#eeee33", "white"];
-var water = ["black", "#003377", "#00ffff", "white"];
-var grass = ["black", "#007733", "#11ff33", "white"];
-var soft = ["black", "#662233","magenta", "pink", "white"];
-var grads = [fire, water, grass, soft];
+var red = ["black", "#771122", "red", "white"];
+var orange = ["black", "#250101", "#370000", "#aa4400", "white", "orange", "white", "#eeee33", "white"];
+var yellow = ["black", "#775511", "yellow", "white"];
+var green = ["black", "#007733", "white", "#11ff33", "white"];
+var blue = ["black", "#003377", "white", "#00ffff", "white"];
+var pink = ["black", "#662233","magenta", "pink", "white"];
+var grads = [red, orange, yellow, green, blue, pink];
 
 // animation related things
 var ctr = Math.floor(Math.random() * grads.length);
 var ctx, tex;
-var levels = 5;
+var levels = 25;
 var queue = [];
+var timer = 0;
 
 init();
 
@@ -71,7 +74,7 @@ function init() {
     document.addEventListener("click", function(e) {
         setGradient(ctx, grads[ ++ctr % grads.length]);
         tex.needsUpdate = true;
-        disturb(e);
+        disturb(e, true);
     }, false);
     animate();
 }
@@ -90,31 +93,36 @@ function genTexture(colors) {
 }
 
 function getAdjacents(row, col) {
-    var arr = []; 
+    var arr = [];
+
+    // splitting up coniditons like this allows easy access for pretty patterns
     if (row > 0) {
         if (col > 0)
             arr.push([row - 1, col - 1]);
         if (col < cols - 1)
             arr.push([row - 1, col + 1]);
-        arr.push([row - 1, col]);
+
     }
     if (row < rows - 1) {
         if (col > 0) 
             arr.push([row + 1, col - 1]);
         if (col < cols - 1)
             arr.push([row + 1, col + 1]);
+    }
+    
+    if (row > 0)
+        arr.push([row - 1, col]);
+    if (row < rows - 1)
         arr.push([row + 1, col]);
-    }
-    if (col > 0) {
+    if (col > 0)
         arr.push([row, col - 1]);
-    }
-    if (col < cols - 1) {
+    if (col < cols - 1)
         arr.push([row, col + 1]);
-    }
+    
     return arr;
 }
 
-function disturb(e) {
+function disturb(e, click) {
     mouse.x = e.clientX / WIDTH * 2 - 1;
     mouse.y = e.clientY / HEIGHT * -2 + 1;
 
@@ -123,11 +131,10 @@ function disturb(e) {
     var intersects = raycaster.intersectObjects(tileArray);
     if (intersects.length > 0) {
         var mesh = intersects[0].object;
-        
-        mesh.rotation.x = Math.PI;
-
-        // propagate([mesh], levels);
-        flare(mesh);
+        if (click)
+            propagate([mesh], levels);
+        else
+            flare(mesh);
     }
 }
 
@@ -138,24 +145,54 @@ function flare(mesh) {
             var aadjMesh = tileArray[iind[0] * cols + iind[1]];
             aadjMesh.rotation.x += 0.1;
         });
-        adjMesh.rotation.x += 0.3;
+        adjMesh.rotation.x += 0.2;
     });
 }
 
-// function propagate(queue, dist) {
+function propagate(queue, dist) {
+    console.log(queue);
+    // var flag = Math.floor(Math.random() * 3);
+    var flag = 2;
     
-//     while (dist > 0) {
-//         for (var k = 0, c = queue.length; k < c; k++) {
-//             var mesh = queue.shift();
-//             mesh.ripple = Math.min(mesh.ripple, dist);
-//             mesh.adjacents.forEach(function(ind) {
-//                 var adjMesh = tileArray[ind[0] * cols + ind[1]];
-//                 queue.push(adjMesh);
-//             });
-//         }
-//         dist--;
-//     }
-// }
+    while (dist > 0) {
+        for (var k = 0, c = queue.length; k < c; k++) {
+            var mesh = queue.shift();
+            if (mesh.ripple < 0) {
+                mesh.ripple = (levels - dist) * 2;
+                mesh.adjacents.forEach(function(ind) {
+                    var adjMesh = tileArray[ind[0] * cols + ind[1]];
+                    switch(flag) {
+                        // Diamond effect
+                    case 0:
+                        if (ind[0] === mesh.row || ind[1] === mesh.col) {
+                            queue.push(adjMesh);
+                        }
+                        break;
+                        // Checkerboard effect
+                    case 1:
+                        if (ind[0] !== mesh.row && ind[1] !== mesh.col) {
+                            queue.push(adjMesh);
+                        }
+                        break;
+                        // tendril effect
+                    case 2:
+                        var factor = Math.floor(Math.random() * NUMSQUARES);
+                        var mod = Math.floor(Math.random() * factor);
+                        if (ind[0] % factor == mod || ind[1] % factor == mod) {
+                            queue.push(adjMesh);
+                        }
+                        break;
+                        // block effect
+                    default:
+                        queue.push(adjMesh);
+                        break;
+                    }
+                });
+            }
+        }
+        dist--;
+    }
+}
 
 function setGradient(ctx, colors) {
     var grad = ctx.createLinearGradient(0, 256, 0, 0);
@@ -172,20 +209,26 @@ function animate() {
     
     requestAnimationFrame(animate);
     tileArray.forEach(function(t) {
-        // if (t.ripple == 0) {
-        //     t.rotation.x = Math.PI;
-        // }
-        // if (t.ripple >= 0) {
-        //     t.ripple--;
-        // }
-        if (t.rotation.x > 0.1) {
+        if (t.rotation.x > 0.05) 
             t.rotation.x /= 1.1;
-        }
-        else {
+        else
             t.rotation.x = 0;
-        }
+        
+        if (t.ripple == 0) 
+            t.rotation.x = Math.PI;
+        if (t.ripple >= 0) 
+            t.ripple--;
+        
         t.material.uniforms.rotation.value = t.rotation.x;
     });
-    
+
+    if (timer > 200) {
+        timer = 0;
+        propagate([tileArray[Math.floor(Math.random() * tileArray.length)]], levels);
+        propagate([tileArray[Math.floor(Math.random() * tileArray.length)]], levels);
+        propagate([tileArray[Math.floor(Math.random() * tileArray.length)]], levels);
+        propagate([tileArray[Math.floor(Math.random() * tileArray.length)]], levels);
+    }
+    timer++;
     renderer.render(scene, camera);
 }
