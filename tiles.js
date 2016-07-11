@@ -3,7 +3,7 @@ window.onload = function() {
     window.setTimeout(function() {
         fade(document.getElementById("title"));
         fade(document.getElementById("info"));
-    }, 2000);
+    }, 4000);
 
     var scene, camera, renderer;
 
@@ -42,7 +42,7 @@ window.onload = function() {
 
     // audio
     var context, bufferLoader, gainNode;
-    var boom;
+    var boom, muted = false;
     init();
 
     function init() {
@@ -81,6 +81,9 @@ window.onload = function() {
         document.addEventListener("mousemove", disturb, false);
 
         document.body.onkeyup = function(e) {
+            if (e.keyCode == 81) {
+                muted = !muted;
+            }
             if (e.keyCode == 32) {
                 var geom;
                 if (shape)
@@ -312,10 +315,12 @@ window.onload = function() {
     }
 
     function playSound(buffer, time) {
-        var source = context.createBufferSource();
-        source.buffer = buffer;
-        source.connect(context.destination);
-        source.start(time);
+        if (muted == false) {
+            var source = context.createBufferSource();
+            source.buffer = boom.buffer;
+            source.connect(context.destination);
+            source.start(time);
+        }
     }    
 
     
